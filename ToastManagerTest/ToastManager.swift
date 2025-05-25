@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct ToastItem: Equatable, Identifiable {
-    let id = UUID()
+    let id: UUID
     let message: String
 }
 
@@ -18,20 +18,31 @@ final class ToastManager: ObservableObject {
     @Published
     var stack: [ToastItem] = []
 
+    func show(message: String, id: UUID, visible: Bool) {
+        if visible {
+            // Add or update
+            let toastItem = ToastItem(id: id, message: message) // Create new item or update existing
+            self.stack[id] = toastItem
+        } else {
+            // Remove
+            self.stack[id] = nil // Setting to nil removes the key-value pair
+        }
+    }
+    
     func show(message: String) {
-        let toastItem = ToastItem(message: message)
-        stack.append(toastItem)
-        DispatchQueue.main.asyncAfter(deadline: .now() + visibleSecs) { [weak self] in
+        let toastItem = ToastItem(id: UUID(), message: message)
+        self.stack.append(toastItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + self.visibleSecs) { [weak self] in
             guard let self else { return }
             
-            if let index = self.stack.firstIndex(where: { $0.id == toastItem.id}) {
+            if let index = self.stack.firstIndex(where: { $0.id == toastItem.id }) {
                 self.stack.remove(at: index)
             }
         }
     }
 }
 
-struct ToastView<Content: View>: View {
+struct ToastStackView<Content: View>: View {
     private let content: (ToastItem) -> Content
     
     @ObservedObject
@@ -47,12 +58,12 @@ struct ToastView<Content: View>: View {
     
     var body: some View {
         ZStack {
-            ForEach(stack, id: \.id) { item in
-                content(item)
+            ForEach(self.stack, id: \.id) { item in
+                self.content(item)
                     .id(item.id)
             }
         }
-        .onChange(of: toastManager.stack) { stack in
+        .onChange(of: self.toastManager.stack) { stack in
             withAnimation(.easeInOut(duration: 0.5)) {
                 self.stack = stack
             }

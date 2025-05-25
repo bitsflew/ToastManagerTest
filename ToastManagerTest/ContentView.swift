@@ -10,10 +10,11 @@ import SwiftUI
 var counter1 = 0
 var counter2 = 0
 
+let stateId = UUID()
 struct ContentView: View {
     let toastManager = ToastManager()
-    
-
+    @State
+    var  state = false
     var body: some View {
         VStack {
             Image(systemName: "globe")
@@ -28,7 +29,13 @@ struct ContentView: View {
                 toastManager.show(message: "counter2 \(counter2)")
                 counter2 += 1
             }
-            ToastView(toastManager: toastManager) { toastItem in
+            
+            Button("Toggle state") {
+                state.toggle()
+                toastManager.show(message: "state \(state)",id: stateId,  visible: state,)
+            }
+            
+            ToastStackView(toastManager: toastManager) { toastItem in
                 Text("count: \(toastItem.message)" )
             }
         }
