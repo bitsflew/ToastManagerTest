@@ -6,9 +6,13 @@
 //
 import SwiftUI
 
-struct ToastItem: Equatable, Identifiable {
+struct ToastItem: Equatable,Identifiable {
     let id: UUID
-    let message: String
+    let view:  AnyView
+    
+    static func == (lhs: ToastItem, rhs: ToastItem) -> Bool {
+            return lhs.id == rhs.id
+        }
 }
 
 @MainActor
@@ -17,20 +21,8 @@ final class ToastManager: ObservableObject {
     
     @Published
     var stack: [ToastItem] = []
-
-    func show(message: String, id: UUID, visible: Bool) {
-        if visible {
-            // Add or update
-            let toastItem = ToastItem(id: id, message: message) // Create new item or update existing
-            self.stack[id] = toastItem
-        } else {
-            // Remove
-            self.stack[id] = nil // Setting to nil removes the key-value pair
-        }
-    }
-    
-    func show(message: String) {
-        let toastItem = ToastItem(id: UUID(), message: message)
+    func show<Content: View>(@ViewBuilder _ content: () -> Content) {
+        let toastItem = ToastItem(id: UUID(), view: AnyView(content()) )
         self.stack.append(toastItem)
         DispatchQueue.main.asyncAfter(deadline: .now() + self.visibleSecs) { [weak self] in
             guard let self else { return }
@@ -40,10 +32,24 @@ final class ToastManager: ObservableObject {
             }
         }
     }
+    
+    func show<Content: View>(id: UUID, visible: Bool, @ViewBuilder _ content: () -> Content) {
+        let toastItem = ToastItem(id:id, view: AnyView(content()) )
+        if let index = self.stack.firstIndex(where: { $0.id == toastItem.id }) {
+            if visible {
+                self.stack.append(toastItem)
+            } else {
+                self.stack.remove(at: index)
+            }
+        } else {
+            if visible {
+                self.stack.append(toastItem)
+            }
+        }
+    }
 }
 
-struct ToastStackView<Content: View>: View {
-    private let content: (ToastItem) -> Content
+struct ToastStackView: View {
     
     @ObservedObject
     var toastManager: ToastManager
@@ -51,15 +57,15 @@ struct ToastStackView<Content: View>: View {
     @State
     private var stack: [ToastItem] = []
     
-    init(toastManager: ToastManager, @ViewBuilder content: @escaping (ToastItem) -> Content) {
+    init(toastManager: ToastManager) {
         self.toastManager = toastManager
-        self.content = content
     }
     
     var body: some View {
         ZStack {
             ForEach(self.stack, id: \.id) { item in
-                self.content(item)
+                item.view
+                    .background(Color(UIColor.systemBackground))
                     .id(item.id)
             }
         }

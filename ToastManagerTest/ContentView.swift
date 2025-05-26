@@ -22,22 +22,26 @@ struct ContentView: View {
                 .foregroundStyle(.tint)
             Text("Hello, world!")
             Button("Show Toast1") {
-                toastManager.show(message: "counter1 \(counter1)")
+                toastManager.show {
+                    Text("counter1 \(counter1)")
+                }
                 counter1 += 1
             }
             Button("Show Toast2") {
-                toastManager.show(message: "counter2 \(counter2)")
+                toastManager.show {
+                    Text("counter2 \(counter2))")
+                }
                 counter2 += 1
             }
             
             Button("Toggle state") {
                 state.toggle()
-                toastManager.show(message: "state \(state)",id: stateId,  visible: state,)
+                toastManager.show(id: stateId,  visible: state) {
+                    Text( "state \(state)")
+                }
             }
             
-            ToastStackView(toastManager: toastManager) { toastItem in
-                Text("count: \(toastItem.message)" )
-            }
+            ToastStackView(toastManager: toastManager)
         }
         .padding()
     }
